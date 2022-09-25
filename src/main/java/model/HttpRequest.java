@@ -14,6 +14,7 @@ public class HttpRequest {
     private String contentType;
     private String contentLength;
     private String requestBody;
+    private HeaderCookie cookie = new HeaderCookie();
 
 
 }

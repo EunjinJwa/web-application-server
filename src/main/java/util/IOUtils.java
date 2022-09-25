@@ -33,6 +33,10 @@ public class IOUtils {
             line = br.readLine();
             if (line.startsWith("Content-Length")) {
                 httpRequest.setContentLength(HttpRequestUtils.getValueFromHeader(line));
+            } else if (line.startsWith("Cookie")) {
+                Map<String, String> stringStringMap = HttpRequestUtils.parseCookies(HttpRequestUtils.getValueFromHeader(line));
+                Boolean logined = Boolean.valueOf(stringStringMap.get("logined"));
+                httpRequest.getCookie().setLogined(logined);
             }
             if (line == null) {
                 break;
