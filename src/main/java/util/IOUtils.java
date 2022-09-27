@@ -1,7 +1,7 @@
 package util;
 
 import model.HttpHeaderType;
-import model.HttpRequest;
+import model.HttpRequest_o;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,8 +11,8 @@ import java.util.Map;
 
 public class IOUtils {
 
-    public static HttpRequest parseHttpRequest(InputStream in) throws IOException {
-        HttpRequest httpRequest = new HttpRequest();
+    public static HttpRequest_o parseHttpRequest(InputStream in) throws IOException {
+        HttpRequest_o httpRequestO = new HttpRequest_o();
         BufferedReader br = new BufferedReader(new InputStreamReader(in, "utf-8"));
         String line = br.readLine();
         final String header = line;
@@ -22,21 +22,21 @@ public class IOUtils {
             String method = HttpRequestUtils.extractUrlHeader(header, HttpHeaderType.METHOD);
             String url = HttpRequestUtils.extractUrlHeader(header, HttpHeaderType.URL);
 
-            httpRequest.setMethod(method);
-            httpRequest.setUrl(url);
+            httpRequestO.setMethod(method);
+            httpRequestO.setUrl(url);
             if (method.equals("GET")) {
-                httpRequest.setQueryString(HttpRequestUtils.extractQueryString(url));
+                httpRequestO.setQueryString(HttpRequestUtils.extractQueryString(url));
             }
         }
 
         while (!"".equals(line)) {
             line = br.readLine();
             if (line.startsWith("Content-Length")) {
-                httpRequest.setContentLength(HttpRequestUtils.getValueFromHeader(line));
+                httpRequestO.setContentLength(HttpRequestUtils.getValueFromHeader(line));
             } else if (line.startsWith("Cookie")) {
                 Map<String, String> stringStringMap = HttpRequestUtils.parseCookies(HttpRequestUtils.getValueFromHeader(line));
                 Boolean logined = Boolean.valueOf(stringStringMap.get("logined"));
-                httpRequest.getCookie().setLogined(logined);
+                httpRequestO.getCookie().setLogined(logined);
             }
             if (line == null) {
                 break;
@@ -44,11 +44,11 @@ public class IOUtils {
             System.out.println("> " + line);
         }
 
-        if (httpRequest.getMethod().equals("POST")) {
-            String readData = readData(br, Integer.parseInt(httpRequest.getContentLength()));
-            httpRequest.setRequestBody(readData);
+        if (httpRequestO.getMethod().equals("POST")) {
+            String readData = readData(br, Integer.parseInt(httpRequestO.getContentLength()));
+            httpRequestO.setRequestBody(readData);
         }
-        return httpRequest;
+        return httpRequestO;
     }
 
     /**

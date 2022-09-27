@@ -4,11 +4,10 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import db.DataBase;
-import model.HttpRequest;
+import model.HttpRequest_o;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,7 @@ public class RequestHandler extends Thread {
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
             DataOutputStream dos = new DataOutputStream(out);
-            HttpRequest request = IOUtils.parseHttpRequest(in);
+            HttpRequest_o request = IOUtils.parseHttpRequest(in);
             final String url = request.getUrl();
 
             String returnUrl = url;
@@ -103,6 +102,7 @@ public class RequestHandler extends Thread {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Set-Cookie: logined=true \r\n");
+            dos.writeBytes("Set-Cookie: name=jinny \r\n");
             dos.writeBytes("Location: " + redirectionUrl + " \r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {

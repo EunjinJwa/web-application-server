@@ -21,6 +21,11 @@ public class HttpRequestUtils {
         return null;
     }
 
+    public static String extractHeader(String headerString, int idx) {
+        String[] token = headerString.split(" ");
+        return token[idx];
+    }
+
     public static String extractQueryString(String url) {
         return  url.substring(url.indexOf("?")+1);
     }
