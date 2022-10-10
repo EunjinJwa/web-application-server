@@ -26,8 +26,26 @@ public class HttpRequestTest {
             Assertions.assertThat(httpRequest.getHeader("Connection")).isEqualTo("keep-alive");
             Assertions.assertThat(httpRequest.getParameter("userId")).isEqualTo("kassy");
 
+            System.out.println("Get Test Completed.");
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void request_POST() {
+        try {
+            InputStream in = new FileInputStream(new File(testDirectory.concat("Http_POST.txt")));
+
+            HttpRequest httpRequest = new HttpRequest(in);
+
+            Assertions.assertThat(httpRequest.getMethod()).isEqualTo("POST");
+            Assertions.assertThat(httpRequest.getPath()).isEqualTo("/user/create");
+            Assertions.assertThat(httpRequest.getParameter("userId")).isEqualTo("kassy");
+
+            System.out.println("POST Test Completed.");
+        } catch (Exception e) {
+
         }
     }
 
