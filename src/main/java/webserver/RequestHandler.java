@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import db.DataBase;
+import model.HttpRequest;
 import model.HttpRequest_o;
 import model.User;
 import org.slf4j.Logger;
@@ -29,59 +30,54 @@ public class RequestHandler extends Thread {
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
-            DataOutputStream dos = new DataOutputStream(out);
-            HttpRequest_o request = IOUtils.parseHttpRequest(in);
-            final String url = request.getUrl();
+            HttpRequest httpRequest = new HttpRequest(in);
+            System.out.println("request > " + httpRequest.getPath());
 
-            String returnUrl = url;
-            if ("/user/create".equals(url)) {
-                User user = parseQueryStringToUser(request.getRequestBody());
+            DataOutputStream dos = new DataOutputStream(out);
+
+            if ("/user/create".equals(httpRequest.getPath())) {
+                User user = parseParametersToUser(httpRequest.getParameters());
                 DataBase.addUser(user);
-                returnUrl = "/index.html";
+                String returnUrl = "/index.html";
                 response302Header(dos, returnUrl);
-            } else if ("/user/login".equals(url)) {
-                User user = parseQueryStringToUser(request.getRequestBody());
-                log.info("로그인 시도 : " + user);
-                User member = DataBase.findUserById(user.getUserId());
-                if (member != null && member.getPassword().equals(user.getPassword())) {
+            } else if ("/user/login".equals(httpRequest.getPath())) {
+                User member = DataBase.findUserById(httpRequest.getParameter("userId"));
+                if (member != null && member.getPassword().equals(httpRequest.getParameter("password"))) {
                     log.info("로그인 성공");
-                    // 로그인 성공
-                    responseLoginSuccess(dos, "/index.html");
+                    responseLoginSuccess(dos, member);
                 } else {
-                    // 로그인 실패
                     log.error("로그인 실패");
-                    responseLoginFail(dos, "/user/login_failed.html");
+                    responseLoginFail(dos);
                 }
-            } else if ("/user/list".equals(url)) {
-                if (!request.getCookie().getLogined()) {
+            } else if ("/user/list".equals(httpRequest.getPath())) {
+                if (!isLogined(httpRequest)) {
                     log.info("로그인 페이지로 이동");
                     responseRedirect(dos, "/user/login.html");
                     return;
                 }
                 log.info("로그인 상태");
                 Collection<User> allUsers = DataBase.findAll();
-                System.out.println(allUsers);
 
                 byte[] body = genUserListHtmlBody(allUsers).getBytes();
                 response200Header(dos, body.length, null);
                 responseBody(dos, body);
-
             } else {
-                byte[] body = Files.readAllBytes(new File("webapp" + url).toPath());
+                byte[] body = Files.readAllBytes(new File("webapp" + httpRequest.getPath()).toPath());
 
-                response200Header(dos, body.length, url);
+                response200Header(dos, body.length, httpRequest.getPath());
                 responseBody(dos, body);
             }
+
         } catch (IOException e) {
             log.error(e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private void responseLoginFail(DataOutputStream dos, String redirectionUrl) {
+    private void responseLoginFail(DataOutputStream dos) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: " + redirectionUrl + " \r\n");
+            dos.writeBytes("Location: /user/login_failed.html \r\n");
             dos.writeBytes("Set-Cookie: logined=false \r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
@@ -98,12 +94,12 @@ public class RequestHandler extends Thread {
             log.error(e.getMessage());
         }
     }
-    private void responseLoginSuccess(DataOutputStream dos, String redirectionUrl) {
+    private void responseLoginSuccess(DataOutputStream dos, User user) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes("Set-Cookie: logined=true \r\n");
-            dos.writeBytes("Set-Cookie: name=jinny \r\n");
-            dos.writeBytes("Location: " + redirectionUrl + " \r\n");
+            dos.writeBytes("Set-Cookie: name="+user.getName()+ "\r\n");
+            dos.writeBytes("Location: /index.html \r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
@@ -126,6 +122,11 @@ public class RequestHandler extends Thread {
         }
     }
 
+    /**
+     * 302 : Location url로 redirect
+     * @param dos
+     * @param redirectionUrl
+     */
     private void response302Header(DataOutputStream dos, String redirectionUrl) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
@@ -145,9 +146,8 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private User parseQueryStringToUser(String queryString) {
-        Map<String, String> queryMap = HttpRequestUtils.parseQueryString(queryString);
-        User user = new User(queryMap.get("userId"), queryMap.get("password"), queryMap.get("name"), queryMap.get("email"));
+    private User parseParametersToUser(Map<String, String> userParams) {
+        User user = new User(userParams.get("userId"), userParams.get("password"), userParams.get("name"), userParams.get("email"));
         System.out.println("User >> " + user);
         return user;
     }
@@ -171,5 +171,9 @@ public class RequestHandler extends Thread {
         sb.append("</body>");
         sb.append("</html>");
         return sb.toString();
+    }
+
+    public boolean isLogined(HttpRequest httpRequest) {
+        return Boolean.parseBoolean(httpRequest.getCookie("logined"));
     }
 }

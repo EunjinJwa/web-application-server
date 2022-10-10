@@ -1,5 +1,6 @@
 package http;
 
+import com.google.common.base.Strings;
 import model.HttpRequest;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -8,6 +9,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class HttpRequestTest {
 
@@ -47,6 +51,17 @@ public class HttpRequestTest {
         } catch (Exception e) {
 
         }
+    }
+
+    @Test
+    public void parseCookieTest() {
+        String cookie = "logined=false; name=jinny";
+        String[] cookieValues = cookie.split(";");
+        Map<String, String> cookieMap = Arrays.stream(cookieValues).map(c -> c.split("="))
+                .collect(Collectors.toMap(p -> p[0], p -> p[1]));
+        Boolean isLogined = Boolean.valueOf(cookieMap.get("logined"));
+
+        Assertions.assertThat(isLogined).isTrue();
     }
 
 }

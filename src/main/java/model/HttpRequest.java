@@ -2,6 +2,7 @@ package model;
 
 import lombok.*;
 import util.HttpRequestUtils;
+import util.IOUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,26 +20,34 @@ public class HttpRequest {
     private String method;
     private String path;
     Map<String, String> headers;
+    Map<String, String> cookies;
     Map<String, String> parameters;
 
     public HttpRequest(InputStream in) {
         headers = new HashMap<>();
         parameters = new HashMap<>();
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            setReqeustUrl(br);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, "utf-8"));
+            final String firstHeader = br.readLine();
+            setReqeustUrl(firstHeader);
             setHeaders(br);
 
-            if (this.method.equals("POST"))
-                setPostParameters(br);
+            System.out.println("header params > " + this.getHeaders());
+            if (this.method.equals("POST")) {
+                String readData = IOUtils.readData(br, Integer.parseInt(this.getHeader("Content-Length")));
+                this.parameters = HttpRequestUtils.parseQueryString(readData);
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void setReqeustUrl(BufferedReader br) throws IOException {
-        String request = br.readLine();
+    private Map<String, String> getHeaders() {
+        return this.headers;
+    }
+
+    private void setReqeustUrl(String request) throws IOException {
         String[] token = request.split(" ");
         setMethod(token[0]);
         String url = token[1];
@@ -77,12 +86,14 @@ public class HttpRequest {
     }
 
     private void setHeaders(BufferedReader br) {
-
         try {
             String line = br.readLine();
             while (!"".equals(line)) {
                 HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
                 headers.put(pair.getKey(), pair.getValue());
+                if ("Cookie".equals(pair.getKey())) {
+                    cookies = HttpRequestUtils.parseCookies(pair.getValue());
+                }
 
                 line = br.readLine();
 
@@ -109,5 +120,20 @@ public class HttpRequest {
 
     public String getPath() {
         return path;
+    }
+
+    public Map<String, String> getParameters() {
+        return parameters;
+    }
+
+    public Map<String, String> getCookies() {
+        return cookies;
+    }
+
+    public String getCookie(String name) {
+        if (cookies == null) {
+            return null;
+        }
+        return cookies.get(name);
     }
 }
