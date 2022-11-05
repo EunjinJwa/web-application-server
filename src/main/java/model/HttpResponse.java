@@ -1,38 +1,61 @@
 package model;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class HttpResponse {
 
-    String redirectUrl;
-    Map<String, String> responseHeader;
+    DataOutputStream dos;
+    HashMap<String, String> headers;
+    byte[] body;
 
-    public String getRedirectUrl() {
-        return redirectUrl;
+    public HttpResponse(OutputStream outputStream) {
+        this.dos = new DataOutputStream(outputStream);
     }
 
-    public Map<String, String> getResponseHeader() {
-        return responseHeader;
+    public void forward(String path) throws Exception {
+        headerWrite();
+        setBody(getBodyByPath(path));
+        dos.write(this.body, 0, this.body.length);
+        dos.flush();
     }
 
-    public void setRedirectUrl(String redirectUrl) {
-        this.redirectUrl = redirectUrl;
+    private void headerWrite() throws IOException {
+        if (this.headers == null) {
+            return;
+        }
+        this.headers.keySet().stream()
+                .forEach(key -> {
+                    try {
+                        dos.writeBytes(key.concat(": ").concat(this.headers.get(key)));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        dos.writeBytes("\r\n");
     }
 
-    public HttpResponse() {
-        this.responseHeader = new HashMap<>();
+    public void sendRedirect(String path) {
+
     }
 
     public void setHeader(String header, String value) {
-        responseHeader.put(header, value);
+        headers.put(header, value);
     }
 
-    public String getHeaderString() {
-        return responseHeader.keySet()
-                .stream()
-                .map(key -> key + ": " + responseHeader.get(key))
-                .collect(Collectors.joining(" \r\n"));
+    public void setBody(byte[] body) {
+        this.body = body;
+    }
+
+    private byte[] getBodyByPath(String path) throws IOException {
+        return Files.readAllBytes(new File("webapp" + path).toPath());
+    }
+
+    private boolean isCss(String path) {
+        return path.endsWith(".css");
     }
 }

@@ -8,7 +8,7 @@ import java.util.Map;
 
 import db.DataBase;
 import model.HttpRequest;
-import model.HttpResponse;
+import model.HttpResponse_;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,26 +36,26 @@ public class RequestHandler extends Thread {
             if ("/user/create".equals(httpRequest.getPath())) {
                 User user = parseParametersToUser(httpRequest.getParameters());
                 DataBase.addUser(user);
-                HttpResponse httpResponse = new HttpResponse();
+                HttpResponse_ httpResponse = new HttpResponse_();
                 httpResponse.setRedirectUrl("/index.html");
                 sendRedirect(dos, httpResponse);
             } else if ("/user/login".equals(httpRequest.getPath())) {
                 User member = DataBase.findUserById(httpRequest.getParameter("userId"));
                 if (member != null && member.getPassword().equals(httpRequest.getParameter("password"))) {
                     log.info("로그인 성공");
-                    HttpResponse httpResponse = new HttpResponse();
+                    HttpResponse_ httpResponse = new HttpResponse_();
                     httpResponse.setRedirectUrl("/index.html");
                     httpResponse.setHeader("Set-Cookie", "logined=true; name="+ member.getName());
                     sendRedirect(dos, httpResponse);
                 } else {
                     log.error("로그인 실패");
-                    HttpResponse httpResponse = new HttpResponse();
+                    HttpResponse_ httpResponse = new HttpResponse_();
                     httpResponse.setRedirectUrl("/user/login_failed.html");
                     httpResponse.setHeader("Set-Cookie", "logined=false");
                     sendRedirect(dos, httpResponse);
                 }
             } else if ("/user/list".equals(httpRequest.getPath())) {
-                HttpResponse httpResponse = new HttpResponse();
+                HttpResponse_ httpResponse = new HttpResponse_();
 
                 if (!isLogined(httpRequest)) {
                     log.info("로그인 페이지로 이동");
@@ -77,7 +77,7 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void sendRedirect(DataOutputStream dos, HttpResponse response) {
+    private void sendRedirect(DataOutputStream dos, HttpResponse_ response) {
         try {
             dos.writeBytes("HTTP/1.1 302 Found \r\n");
             dos.writeBytes(response.getHeaderString() + " \r\n");
