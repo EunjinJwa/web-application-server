@@ -15,14 +15,42 @@ public class HttpResponse {
 
     public HttpResponse(OutputStream outputStream) {
         this.dos = new DataOutputStream(outputStream);
+        headers = new HashMap<>();
     }
 
     public void forward(String path) throws Exception {
+        dos.writeBytes("HTTP/1.1 200 OK \r\n");
+        if (path.endsWith(".css")) {
+            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
+        } else {
+            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+        }
         headerWrite();
         setBody(getBodyByPath(path));
+        dos.writeBytes("Content-Length: " + body.length + "\r\n");
+        dos.writeBytes("\r\n");
+
         dos.write(this.body, 0, this.body.length);
         dos.flush();
     }
+
+    public void forward() throws Exception {
+        dos.writeBytes("HTTP/1.1 200 OK \r\n");
+        headerWrite();
+        dos.writeBytes("Content-Length: " + body.length + "\r\n");
+        dos.writeBytes("\r\n");
+
+        dos.write(this.body, 0, this.body.length);
+        dos.flush();
+    }
+
+    public void sendRedirect(String path) throws IOException {
+        dos.writeBytes("HTTP/1.1 302 Found \r\n");
+        headerWrite();
+        dos.writeBytes("Location: " + path+ " \r\n");
+        dos.writeBytes("\r\n");
+    }
+
 
     private void headerWrite() throws IOException {
         if (this.headers == null) {
@@ -31,17 +59,13 @@ public class HttpResponse {
         this.headers.keySet().stream()
                 .forEach(key -> {
                     try {
-                        dos.writeBytes(key.concat(": ").concat(this.headers.get(key)));
+                        dos.writeBytes(key.concat(": ").concat(this.headers.get(key)).concat(" \r\n"));
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 });
-        dos.writeBytes("\r\n");
     }
 
-    public void sendRedirect(String path) {
-
-    }
 
     public void setHeader(String header, String value) {
         headers.put(header, value);
