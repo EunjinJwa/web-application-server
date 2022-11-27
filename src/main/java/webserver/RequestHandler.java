@@ -2,14 +2,11 @@ package webserver;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import db.DataBase;
 import model.HttpRequest;
 import model.HttpResponse;
-import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,18 +15,18 @@ public class RequestHandler extends Thread {
 
     private Socket connection;
 
-    private Map<String, Controller> requestMap = new HashMap();
+    private Map<String, Controller> controllers = new HashMap();
 
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
 
-        requestMap.put("/user/create", new CreateUserController());
-        requestMap.put("/user/login", new LoginController());
-        requestMap.put("/user/list", new ListUserController());
+        controllers.put("/user/create", new CreateUserController());
+        controllers.put("/user/login", new LoginController());
+        controllers.put("/user/list", new ListUserController());
     }
 
     private Controller getRequestController(String url) {
-        Controller controller = requestMap.get(url);
+        Controller controller = controllers.get(url);
         return controller == null ? new AbstractController() : controller;
     }
 
