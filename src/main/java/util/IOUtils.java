@@ -1,7 +1,6 @@
 package util;
 
 import model.HttpHeaderType;
-import model.HttpRequest_o;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -10,46 +9,6 @@ import java.io.InputStreamReader;
 import java.util.Map;
 
 public class IOUtils {
-
-    public static HttpRequest_o parseHttpRequest(InputStream in) throws IOException {
-        HttpRequest_o httpRequestO = new HttpRequest_o();
-        BufferedReader br = new BufferedReader(new InputStreamReader(in, "utf-8"));
-        String line = br.readLine();
-        final String header = line;
-
-        System.out.println("[Header] " + header);
-        if (header != null) {
-            String method = HttpRequestUtils.extractUrlHeader(header, HttpHeaderType.METHOD);
-            String url = HttpRequestUtils.extractUrlHeader(header, HttpHeaderType.URL);
-
-            httpRequestO.setMethod(method);
-            httpRequestO.setUrl(url);
-            if (method.equals("GET")) {
-                httpRequestO.setQueryString(HttpRequestUtils.extractQueryString(url));
-            }
-        }
-
-        while (!"".equals(line)) {
-            line = br.readLine();
-            if (line.startsWith("Content-Length")) {
-                httpRequestO.setContentLength(HttpRequestUtils.getValueFromHeader(line));
-            } else if (line.startsWith("Cookie")) {
-                Map<String, String> stringStringMap = HttpRequestUtils.parseCookies(HttpRequestUtils.getValueFromHeader(line));
-                Boolean logined = Boolean.valueOf(stringStringMap.get("logined"));
-                httpRequestO.getCookie().setLogined(logined);
-            }
-            if (line == null) {
-                break;
-            }
-            System.out.println("> " + line);
-        }
-
-        if (httpRequestO.getMethod().equals("POST")) {
-            String readData = readData(br, Integer.parseInt(httpRequestO.getContentLength()));
-            httpRequestO.setRequestBody(readData);
-        }
-        return httpRequestO;
-    }
 
     /**
      * @param BufferedReader는

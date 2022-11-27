@@ -1,6 +1,8 @@
 package model;
 
 import lombok.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
 import util.IOUtils;
 
@@ -17,77 +19,23 @@ import java.util.Map;
 @NoArgsConstructor
 public class HttpRequest {
 
-    private String method;
-    private String path;
+    private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
+
+    RequestLine requestLine;
     Map<String, String> headers;
     Map<String, String> cookies;
-    Map<String, String> parameters;
+    Map<String, String> params;
 
     public HttpRequest(InputStream in) {
         headers = new HashMap<>();
-        parameters = new HashMap<>();
+        params = new HashMap<>();
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(in, "utf-8"));
-            final String firstHeader = br.readLine();
-            setReqeustUrl(firstHeader);
-            setHeaders(br);
 
-            System.out.println("header params > " + this.getHeaders());
-            if (this.method.equals("POST")) {
-                String readData = IOUtils.readData(br, Integer.parseInt(this.getHeader("Content-Length")));
-                this.parameters = HttpRequestUtils.parseQueryString(readData);
-            }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Map<String, String> getHeaders() {
-        return this.headers;
-    }
-
-    private void setReqeustUrl(String request) throws IOException {
-        String[] token = request.split(" ");
-        setMethod(token[0]);
-        String url = token[1];
-        setPath(url);
-        if (this.getMethod().equals("GET")) {
-            System.out.println("call get Parameter");
-            setGetParameter(url);
-        }
-    }
-
-    private void setPath(String url) {
-        this.path = parsePathFromUrl(url);
-    }
-
-    private String parsePathFromUrl(String url) {
-        if (this.getMethod().equals("GET") && url.indexOf("?") > 0) {
-            return url.substring(0, url.indexOf("?"));
-        } else {
-            return url;
-        }
-    }
-
-    private void setGetParameter(String url) {
-        this.parameters = HttpRequestUtils.parseQueryString(HttpRequestUtils.extractQueryString(url));
-    }
-    private void setPostParameters(BufferedReader br) {
-        try {
-            this.parameters = HttpRequestUtils.parseQueryString(br.readLine());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void setMethod(String request) {
-        this.method = HttpRequestUtils.extractHeader(request, 0);
-    }
-
-    private void setHeaders(BufferedReader br) {
-        try {
             String line = br.readLine();
+            requestLine = new RequestLine(line);
+
+            line = br.readLine();
             while (!"".equals(line)) {
                 HttpRequestUtils.Pair pair = HttpRequestUtils.parseHeader(line);
                 headers.put(pair.getKey(), pair.getValue());
@@ -101,9 +49,27 @@ public class HttpRequest {
                     return;
                 }
             }
+
+            if (headers.containsKey("Content-Length")) {
+                String body = IOUtils.readData(br, Integer.parseInt(this.getHeader("Content-Length")));
+                params = HttpRequestUtils.parseQueryString(body);
+            } else {
+                params = requestLine.getParams();
+            }
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "HttpRequest{" +
+                "requestLine=" + requestLine +
+                ", headers=" + headers +
+                ", cookies=" + cookies +
+                ", params=" + params +
+                '}';
     }
 
     public String getHeader(String header) {
@@ -111,19 +77,19 @@ public class HttpRequest {
     }
 
     public String getParameter(String parameter) {
-        return parameters.get(parameter);
+        return params.get(parameter);
     }
 
-    public String getMethod() {
-        return method;
+    public HttpMethod getMethod() {
+        return requestLine.getMethod();
     }
 
     public String getPath() {
-        return path;
+        return requestLine.getPath();
     }
 
-    public Map<String, String> getParameters() {
-        return parameters;
+    public Map<String, String> getParams() {
+        return params;
     }
 
     public Map<String, String> getCookies() {

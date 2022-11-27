@@ -3,6 +3,7 @@ package webserver;
 import java.io.*;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 import db.DataBase;
@@ -17,9 +18,21 @@ public class RequestHandler extends Thread {
 
     private Socket connection;
 
+    private Map<String, Controller> requestMap = new HashMap();
+
     public RequestHandler(Socket connectionSocket) {
         this.connection = connectionSocket;
+
+        requestMap.put("/user/create", new CreateUserController());
+        requestMap.put("/user/login", new LoginController());
+        requestMap.put("/user/list", new ListUserController());
     }
+
+    private Controller getRequestController(String url) {
+        Controller controller = requestMap.get(url);
+        return controller == null ? new AbstractController() : controller;
+    }
+
 
     public void run() {
         log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
@@ -28,47 +41,50 @@ public class RequestHandler extends Thread {
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
             HttpRequest httpRequest = new HttpRequest(in);
-            System.out.println("request > " + httpRequest.getPath());
+            log.info(httpRequest.toString());
 
-            if ("/user/create".equals(httpRequest.getPath())) {
-                User user = parseParametersToUser(httpRequest.getParameters());
-                DataBase.addUser(user);
-                HttpResponse response = new HttpResponse(out);
-                response.sendRedirect("/index.html");
-
-            } else if ("/user/login".equals(httpRequest.getPath())) {
-                User member = DataBase.findUserById(httpRequest.getParameter("userId"));
-                if (member != null && member.getPassword().equals(httpRequest.getParameter("password"))) {
-                    log.info("로그인 성공");
-
-                    HttpResponse response = new HttpResponse(out);
-                    response.setHeader("Set-Cookie", "logined=true; name="+ member.getName());
-                    response.sendRedirect("/index.html");
-
-                } else {
-                    log.error("로그인 실패");
-                    HttpResponse response = new HttpResponse(out);
-                    response.setHeader("Set-Cookie", "logined=false");
-                    response.sendRedirect("/user/login_failed.html");
-
-                }
-            } else if ("/user/list".equals(httpRequest.getPath())) {
-                HttpResponse response = new HttpResponse(out);
-
-                if (!isLogined(httpRequest)) {
-                    log.info("로그인 페이지로 이동");
-                    response.sendRedirect("/user/login.html");
-                    return;
-                }
-                log.info("로그인 상태");
-                Collection<User> allUsers = DataBase.findAll();
-                response.setBody(genUserListHtmlBody(allUsers).getBytes());
-                response.forward();
-
-            } else {
-                HttpResponse response = new HttpResponse(out);
-                response.forward(httpRequest.getPath());
-            }
+            Controller controller = getRequestController(httpRequest.getPath());
+            controller.service(httpRequest, new HttpResponse(out));
+//
+//            if ("/user/create".equals(httpRequest.getPath())) {
+//                User user = parseParametersToUser(httpRequest.getParameters());
+//                DataBase.addUser(user);
+//                HttpResponse response = new HttpResponse(out);
+//                response.sendRedirect("/index.html");
+//
+//            } else if ("/user/login".equals(httpRequest.getPath())) {
+//                User member = DataBase.findUserById(httpRequest.getParameter("userId"));
+//                if (member != null && member.getPassword().equals(httpRequest.getParameter("password"))) {
+//                    log.info("로그인 성공");
+//
+//                    HttpResponse response = new HttpResponse(out);
+//                    response.setHeader("Set-Cookie", "logined=true; name="+ member.getName());
+//                    response.sendRedirect("/index.html");
+//
+//                } else {
+//                    log.error("로그인 실패");
+//                    HttpResponse response = new HttpResponse(out);
+//                    response.setHeader("Set-Cookie", "logined=false");
+//                    response.sendRedirect("/user/login_failed.html");
+//
+//                }
+//            } else if ("/user/list".equals(httpRequest.getPath())) {
+//                HttpResponse response = new HttpResponse(out);
+//
+//                if (!isLogined(httpRequest)) {
+//                    log.info("로그인 페이지로 이동");
+//                    response.sendRedirect("/user/login.html");
+//                    return;
+//                }
+//                log.info("로그인 상태");
+//                Collection<User> allUsers = DataBase.findAll();
+//                response.setBody(genUserListHtmlBody(allUsers).getBytes());
+//                response.forward();
+//
+//            } else {
+//                HttpResponse response = new HttpResponse(out);
+//                response.forward(httpRequest.getPath());
+//            }
         } catch (IOException e) {
             log.error(e.getMessage());
             e.printStackTrace();
@@ -79,7 +95,6 @@ public class RequestHandler extends Thread {
 
     private User parseParametersToUser(Map<String, String> userParams) {
         User user = new User(userParams.get("userId"), userParams.get("password"), userParams.get("name"), userParams.get("email"));
-        System.out.println("User >> " + user);
         return user;
     }
 

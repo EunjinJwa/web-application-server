@@ -30,6 +30,7 @@ public class HttpResponse {
         dos.writeBytes("Content-Length: " + body.length + "\r\n");
         dos.writeBytes("\r\n");
 
+        System.out.println("body : " + body.length);
         dos.write(this.body, 0, this.body.length);
         dos.flush();
     }
