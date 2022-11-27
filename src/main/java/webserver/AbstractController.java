@@ -4,8 +4,6 @@ import model.HttpRequest;
 import model.HttpResponse;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class AbstractController implements Controller {
     @Override
@@ -22,6 +20,6 @@ public class AbstractController implements Controller {
     }
 
     public void doGet(HttpRequest request, HttpResponse response) throws Exception {
-        response.forward(request.getPath());
+        response.forwardBody(request.getPath());
     }
 }

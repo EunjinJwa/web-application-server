@@ -21,14 +21,11 @@ public class ListUserController extends AbstractController {
     @Override
     public void doGet(HttpRequest request, HttpResponse response) throws Exception {
         if (!isLogined(request)) {
-            log.info("로그인 페이지로 이동");
             response.sendRedirect("/user/login.html");
             return;
         }
-        log.info("로그인 상태");
         Collection<User> allUsers = DataBase.findAll();
-        response.setBody(genUserListHtmlBody(allUsers).getBytes());
-        response.forward();
+        response.forwardBody(genUserListHtmlBody(allUsers).getBytes());
     }
 
     private String genUserListHtmlBody(Collection<User> users) {
